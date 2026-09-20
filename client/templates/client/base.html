@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{% block title %}{{ restaurant.name }}{% endblock %}</title>
+    <style>
+        :root {
+            --primary: {{ restaurant.primary_color|default:"#4CAF50" }};
+            --secondary: {{ restaurant.secondary_color|default:"#FFFFFF" }};
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            padding-bottom: 80px;
+        }
+        .header {
+            background: var(--primary);
+            color: white;
+            padding: 15px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header h1 {
+            font-size: 20px;
+            margin: 0;
+        }
+        .header .table-info {
+            font-size: 13px;
+            opacity: 0.9;
+            margin-top: 3px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 15px;
+        }
+        .category-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 20px 0 10px;
+            color: #333;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--primary);
+        }
+        .menu-item {
+            background: white;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 10px;
+            display: flex;
+            gap: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .menu-item img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 10px;
+            flex-shrink: 0;
+        }
+        .menu-item .no-image {
+            width: 80px;
+            height: 80px;
+            background: #eee;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            flex-shrink: 0;
+        }
+        .menu-item .info {
+            flex: 1;
+            min-width: 0;
+        }
+        .menu-item .name {
+            font-weight: bold;
+            font-size: 15px;
+            margin-bottom: 3px;
+        }
+        .menu-item .desc {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 5px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+        .menu-item .bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 8px;
+        }
+        .menu-item .price {
+            font-weight: bold;
+            color: var(--primary);
+            font-size: 16px;
+        }
+        .menu-item .weight {
+            font-size: 11px;
+            color: #aaa;
+        }
+        .btn-add {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-add:active {
+            transform: scale(0.95);
+        }
+        .cart-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--primary);
+            color: white;
+            padding: 15px 20px;
+            display: none;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 200;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        }
+        .cart-bar.active {
+            display: flex;
+        }
+        .cart-bar .info {
+            font-size: 15px;
+        }
+        .cart-bar .total {
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .cart-bar button {
+            background: white;
+            color: var(--primary);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            font-size: 15px;
+            cursor: pointer;
+        }
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            z-index: 300;
+            align-items: flex-end;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            border-radius: 20px 20px 0 0;
+            padding: 20px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .modal-header h2 {
+            font-size: 20px;
+        }
+        .modal-header button {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #999;
+        }
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .cart-item .qty-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .qty-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 1px solid #ddd;
+            background: white;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .qty-btn.primary {
+            background: var(--primary);
+            color: white;
+            border: none;
+        }
+        .comment-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            font-size: 14px;
+            margin: 15px 0;
+            resize: none;
+            font-family: inherit;
+        }
+        .btn-submit {
+            width: 100%;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .btn-submit:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 400;
+        }
+        .toast.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>{{ restaurant.name }}</h1>
+        <div class="table-info">Столик №{{ table.number }}{% if table.zone %} • {{ table.zone }}{% endif %}</div>
+    </div>
+    
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+    
+    <div class="cart-bar" id="cartBar">
+        <div class="info">
+            <span id="cartCount">0</span> товаров • 
+            <span class="total"><span id="cartTotal">0</span> {{ restaurant.currency }}</span>
+        </div>
+        <button onclick="openCart()">Корзина</button>
+    </div>
+    
+    <div class="toast" id="toast"></div>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

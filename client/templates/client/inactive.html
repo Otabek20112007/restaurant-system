@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ restaurant.name }}</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background: #f5f5f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 400px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; margin: 20px 0 10px; }
+        p { color: #888; line-height: 1.6; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div style="font-size: 60px;">⏸</div>
+        <h1>{{ restaurant.name }}</h1>
+        <p>
+            Ресторан временно не принимает заказы через приложение.
+            Пожалуйста, обратитесь к официанту.
+        </p>
+    </div>
+</body>
+</html>

@@ -1,0 +1,49 @@
+{% extends 'client/base.html' %}
+
+{% block title %}Заказ #{{ order.id }}{% endblock %}
+
+{% block content %}
+<div style="text-align: center; padding: 30px 20px;">
+    <div style="font-size: 60px; margin-bottom: 20px;">✅</div>
+    <h2 style="margin-bottom: 10px;">Заказ принят!</h2>
+    <p style="color: #888; margin-bottom: 30px;">Номер заказа: <strong>#{{ order.id }}</strong></p>
+    
+    <div style="background: white; border-radius: 15px; padding: 20px; text-align: left; margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+            <span style="color: #888;">Статус:</span>
+            <strong style="color: var(--primary);">{{ order.get_status_display }}</strong>
+        </div>
+        
+        <div style="border-top: 1px solid #eee; padding-top: 15px;">
+            {% for item in order.items.all %}
+                <div style="display: flex; justify-content: space-between; padding: 8px 0;">
+                    <span>{{ item.quantity }}× {{ item.menu_item.name }}</span>
+                    <span style="color: #888;">{{ item.price }} {{ restaurant.currency }}</span>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; border-top: 2px solid #eee; padding-top: 15px; margin-top: 15px; font-size: 18px; font-weight: bold;">
+            <span>Итого:</span>
+            <span style="color: var(--primary);">{{ order.total_price }} {{ restaurant.currency }}</span>
+        </div>
+    </div>
+    
+    {% if order.comment %}
+        <div style="background: #fff3cd; border-radius: 10px; padding: 15px; text-align: left; margin-bottom: 20px;">
+            <strong>Комментарий:</strong> {{ order.comment }}
+        </div>
+    {% endif %}
+    
+    <p style="color: #888; font-size: 14px;">
+        Мы сообщим, когда заказ будет готов
+    </p>
+    
+    <div style="margin-top: 30px;">
+        <a href="/r/{{ restaurant.slug }}/t/{{ order.table.qr_token }}/" 
+           style="display: inline-block; background: var(--primary); color: white; padding: 12px 30px; border-radius: 25px; text-decoration: none; font-weight: bold;">
+            ← Вернуться в меню
+        </a>
+    </div>
+</div>
+{% endblock %}

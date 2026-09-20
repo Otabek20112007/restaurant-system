@@ -1,0 +1,98 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Меню{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <h1>Меню</h1>
+        <p class="text-muted mb-0">
+            Категорий: {{ categories.count }} | Блюд: {{ restaurant.menu_items.count }}
+        </p>
+    </div>
+    <div>
+        <a href="{% url 'dashboard:category_create' %}" class="btn btn-outline-primary">
+            + Категория
+        </a>
+        <a href="{% url 'dashboard:item_create' %}" class="btn btn-primary">
+            + Блюдо
+        </a>
+    </div>
+</div>
+
+{% if categories %}
+    {% for category in categories %}
+        <div class="stat-card mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h5 class="mb-1">
+                        {{ category.name }}
+                        <span class="badge bg-secondary">{{ category.get_printer_target_display }}</span>
+                    </h5>
+                    <small class="text-muted">Блюд: {{ category.items.count }}</small>
+                </div>
+                <div>
+                    <a href="{% url 'dashboard:category_edit' category.id %}" class="btn btn-sm btn-outline-secondary">✏️</a>
+                    <a href="{% url 'dashboard:category_delete' category.id %}" class="btn btn-sm btn-outline-danger">🗑</a>
+                </div>
+            </div>
+            
+            {% if category.items.all %}
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width: 60px;">Фото</th>
+                            <th>Название</th>
+                            <th>Цена</th>
+                            <th>Вес</th>
+                            <th>Доступно</th>
+                            <th style="width: 120px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in category.items.all %}
+                            <tr>
+                                <td>
+                                    {% if item.image %}
+                                        <img src="{{ item.image.url }}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 5px;">
+                                    {% else %}
+                                        <div style="width: 50px; height: 50px; background: #eee; border-radius: 5px;"></div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <strong>{{ item.name }}</strong>
+                                    {% if item.description %}
+                                        <br><small class="text-muted">{{ item.description|truncatechars:60 }}</small>
+                                    {% endif %}
+                                </td>
+                                <td><strong>{{ item.price }} сом</strong></td>
+                                <td>{{ item.weight }} г</td>
+                                <td>
+                                    {% if item.is_available %}
+                                        <span class="badge bg-success">Да</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Нет</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'dashboard:item_edit' item.id %}" class="btn btn-sm btn-outline-secondary">✏️</a>
+                                    <a href="{% url 'dashboard:item_delete' item.id %}" class="btn btn-sm btn-outline-danger">🗑</a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p class="text-muted mb-0">В этой категории пока нет блюд</p>
+            {% endif %}
+        </div>
+    {% endfor %}
+{% else %}
+    <div class="stat-card text-center py-5">
+        <div style="font-size: 60px;">📖</div>
+        <h4>Меню пока пустое</h4>
+        <p class="text-muted">Начните с создания первой категории, например «Пицца» или «Напитки».</p>
+        <a href="{% url 'dashboard:category_create' %}" class="btn btn-primary">Создать категорию</a>
+    </div>
+{% endif %}
+{% endblock %}

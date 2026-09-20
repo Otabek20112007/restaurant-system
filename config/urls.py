@@ -1,19 +1,34 @@
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from apps import views
 
 urlpatterns = [
+    # Админка Django (супер-админ)
     path('admin/', admin.site.urls),
     
-    # Клиентский API
+    # Аутентификация (регистрация, верификация email)
+    path('auth/', include('auth_app.urls')),
+    
+    # Личный кабинет владельца
+    path('dashboard/', include('dashboard.urls')),
+
+    path('cashier/', include('cashier.urls')),  # ← добавили
+
+    path('kds/', include('kds.urls')),  # ← добавили
+
+    # Клиентское меню (открывается по QR)
+    path('', include('client.urls')),  # ← добавили
+
+    
+    # === Клиентский API ===
     path('api/menu/', views.menu_view, name='menu'),
     path('api/table/<str:token>/', views.table_by_token, name='table-by-token'),
     path('api/order/<str:token>/', views.create_order, name='create-order'),
     path('api/order/<int:order_id>/status/', views.order_status, name='order-status'),
     
-    # API для кассы
+    # === API для кассы ===
     path('api/cashier/login/', views.cashier_login, name='cashier-login'),
     path('api/cashier/logout/', views.cashier_logout, name='cashier-logout'),
     path('api/cashier/me/', views.cashier_me, name='cashier-me'),

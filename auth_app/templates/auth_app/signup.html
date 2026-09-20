@@ -1,0 +1,84 @@
+{% extends 'auth_app/base.html' %}
+
+{% block title %}Регистрация ресторана{% endblock %}
+
+{% block content %}
+<h1>Регистрация ресторана</h1>
+<p class="subtitle">Заполните форму — мы отправим письмо для подтверждения</p>
+
+<form method="post">
+    {% csrf_token %}
+    
+    <div class="section-title">О ресторане</div>
+    
+    <div class="mb-3">
+        <label class="form-label">{{ form.restaurant_name.label }}</label>
+        {{ form.restaurant_name }}
+        {% if form.restaurant_name.errors %}
+            <div class="text-danger small">{{ form.restaurant_name.errors.0 }}</div>
+        {% endif %}
+    </div>
+    
+    <div class="mb-3">
+        <label class="form-label">{{ form.phone.label }}</label>
+        {{ form.phone }}
+        {% if form.phone.errors %}
+            <div class="text-danger small">{{ form.phone.errors.0 }}</div>
+        {% endif %}
+    </div>
+    
+    <div class="mb-3">
+        <label class="form-label">{{ form.address.label }}</label>
+        {{ form.address }}
+    </div>
+    
+    <div class="section-title">Данные владельца</div>
+    
+    <div class="mb-3">
+        <label class="form-label">{{ form.username.label }}</label>
+        {{ form.username }}
+        {% if form.username.errors %}
+            <div class="text-danger small">{{ form.username.errors.0 }}</div>
+        {% endif %}
+    </div>
+    
+    <div class="mb-3">
+        <label class="form-label">{{ form.email.label }}</label>
+        {{ form.email }}
+        {% if form.email.errors %}
+            <div class="text-danger small">{{ form.email.errors.0 }}</div>
+        {% endif %}
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label class="form-label">{{ form.password1.label }}</label>
+            {{ form.password1 }}
+            {% if form.password1.errors %}
+                <div class="text-danger small">{{ form.password1.errors.0 }}</div>
+            {% endif %}
+        </div>
+        <div class="col-md-6 mb-3">
+            <label class="form-label">{{ form.password2.label }}</label>
+            {{ form.password2 }}
+            {% if form.password2.errors %}
+                <div class="text-danger small">{{ form.password2.errors.0 }}</div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="mb-4 form-check">
+        {{ form.agree }}
+        <label class="form-check-label">{{ form.agree.label }}</label>
+        {% if form.agree.errors %}
+            <div class="text-danger small">{{ form.agree.errors.0 }}</div>
+        {% endif %}
+    </div>
+    
+    <button type="submit" class="btn btn-primary w-100">Зарегистрировать ресторан</button>
+</form>
+
+<p class="text-center mt-3 text-muted small">
+    Уже есть аккаунт? <a href="/admin/">Войти</a>
+</p>
+{% endblock %}

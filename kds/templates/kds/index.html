@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Кухня — {{ restaurant.name }}</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #1a1a2e;
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        .topbar {
+            background: #0f0f1e;
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.3);
+        }
+        .topbar .brand {
+            font-size: 22px;
+            font-weight: bold;
+        }
+        .topbar .stats {
+            display: flex;
+            gap: 25px;
+            font-size: 15px;
+        }
+        .topbar .stat {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .topbar .stat .num {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .topbar .stat.new .num { color: #ff6b35; }
+        .topbar .stat.cooking .num { color: #ffc107; }
+        
+        .columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 20px;
+            min-height: calc(100vh - 80px);
+        }
+        
+        .column {
+            background: rgba(255,255,255,0.03);
+            border-radius: 15px;
+            padding: 15px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .column-header {
+            font-size: 18px;
+            font-weight: bold;
+            padding-bottom: 15px;
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .column.new .column-header { color: #ff6b35; }
+        .column.cooking .column-header { color: #ffc107; }
+        
+        .orders-list {
+            display: grid;
+            gap: 15px;
+        }
+        
+        .order-card {
+            background: #262640;
+            border-radius: 12px;
+            padding: 15px;
+            border-left: 6px solid #ff6b35;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            animation: slideIn 0.3s ease;
+        }
+        .order-card.cooking {
+            border-left-color: #ffc107;
+        }
+        .order-card.urgent {
+            border-left-color: #dc3545;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 4px 10px rgba(220, 53, 69, 0.3); }
+            50% { box-shadow: 0 4px 20px rgba(220, 53, 69, 0.6); }
+        }
+        
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .order-number {
+            font-size: 22px;
+            font-weight: bold;
+        }
+        .order-table {
+            background: #4CAF50;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        .order-time {
+            font-size: 13px;
+            color: #999;
+        }
+        .order-time.urgent {
+            color: #ff6b35;
+            font-weight: bold;
+        }
+        
+        .order-items {
+            margin-bottom: 12px;
+        }
+        .order-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 16px;
+        }
+        .order-item .qty {
+            color: #ff6b35;
+            font-weight: bold;
+            margin-right: 8px;
+            font-size: 18px;
+        }
+        
+        .order-comment {
+            background: rgba(255, 193, 7, 0.15);
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 12px;
+            color: #ffc107;
+        }
+        
+        .order-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .btn-action {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-cooking {
+            background: #ffc107;
+            color: #1a1a2e;
+        }
+        .btn-cooking:hover {
+            background: #ffb300;
+        }
+        .btn-ready {
+            background: #4CAF50;
+            color: white;
+        }
+        .btn-ready:hover {
+            background: #388E3C;
+        }
+        
+        .empty-column {
+            text-align: center;
+            padding: 60px 20px;
+            color: #555;
+        }
+        .empty-column .icon {
+            font-size: 60px;
+            margin-bottom: 15px;
+        }
+        .empty-column p {
+            font-size: 16px;
+        }
+        
+        /* Звуковое уведомление */
+        #sound-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #ff6b35;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 18px;
+            display: none;
+            animation: slideIn 0.3s;
+            z-index: 9999;
+        }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <div class="brand">👨‍🍳 Кухня — {{ restaurant.name }}</div>
+        <div class="stats">
+            <div class="stat new">
+                <span>Новые:</span>
+                <span class="num" id="new-count">0</span>
+            </div>
+            <div class="stat cooking">
+                <span>Готовится:</span>
+                <span class="num" id="cooking-count">0</span>
+            </div>
+        </div>
+        <a href="{% url 'kds:logout' %}" style="color: #999; text-decoration: none;">Выйти</a>
+    </div>
+    
+    <div id="sound-indicator">🔔 Новый заказ!</div>
+    
+    <div class="columns">
+        <!-- Колонка "Новые" -->
+        <div class="column new">
+            <div class="column-header">
+                <span>🆕 Новые</span>
+                <span id="new-count-col">0</span>
+            </div>
+            <div class="orders-list" id="new-orders">
+                <div class="empty-column">
+                    <div class="icon">⏳</div>
+                    <p>Загрузка...</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Колонка "Готовится" -->
+        <div class="column cooking">
+            <div class="column-header">
+                <span>🍳 Готовится</span>
+                <span id="cooking-count-col">0</span>
+            </div>
+            <div class="orders-list" id="cooking-orders">
+                <div class="empty-column">
+                    <div class="icon">⏳</div>
+                    <p>Загрузка...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const CSRF_TOKEN = '{{ csrf_token }}';
+        let previousOrderIds = new Set();
+        let soundEnabled = true;
+        
+        function playNotificationSound() {
+            if (!soundEnabled) return;
+            
+            // Звук через Web Audio API (не требует файла)
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+                
+                // Второй сигнал
+                setTimeout(() => {
+                    const osc2 = audioContext.createOscillator();
+                    const gain2 = audioContext.createGain();
+                    osc2.connect(gain2);
+                    gain2.connect(audioContext.destination);
+                    osc2.frequency.value = 1000;
+                    osc2.type = 'sine';
+                    gain2.gain.setValueAtTime(0.3, audioContext.currentTime);
+                    gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                    osc2.start(audioContext.currentTime);
+                    osc2.stop(audioContext.currentTime + 0.5);
+                }, 200);
+            } catch (e) {
+                console.log('Звук не работает:', e);
+            }
+        }
+        
+        function loadOrders() {
+            fetch('{% url "kds:orders_api" %}')
+                .then(r => r.json())
+                .then(data => {
+                    const newOrders = data.orders.filter(o => o.status === 'new');
+                    const cookingOrders = data.orders.filter(o => o.status === 'cooking');
+                    
+                    // Проверяем новые заказы
+                    const currentOrderIds = new Set(data.orders.map(o => o.id));
+                    const hasNewOrders = data.orders.some(o => 
+                        o.status === 'new' && !previousOrderIds.has(o.id)
+                    );
+                    
+                    if (hasNewOrders && previousOrderIds.size > 0) {
+                        playNotificationSound();
+                        showSoundIndicator();
+                    }
+                    
+                    previousOrderIds = currentOrderIds;
+                    
+                    // Обновляем счётчики
+                    document.getElementById('new-count').textContent = data.new_count;
+                    document.getElementById('cooking-count').textContent = data.cooking_count;
+                    document.getElementById('new-count-col').textContent = data.new_count;
+                    document.getElementById('cooking-count-col').textContent = data.cooking_count;
+                    
+                    // Рендерим заказы
+                    renderOrders('new-orders', newOrders, 'new');
+                    renderOrders('cooking-orders', cookingOrders, 'cooking');
+                })
+                .catch(err => console.error('Ошибка:', err));
+        }
+        
+        function renderOrders(containerId, orders, status) {
+            const container = document.getElementById(containerId);
+            
+            if (orders.length === 0) {
+                const emptyText = status === 'new' 
+                    ? 'Нет новых заказов' 
+                    : 'Ничего не готовится';
+                const emptyIcon = status === 'new' ? '✅' : '⏳';
+                container.innerHTML = `
+                    <div class="empty-column">
+                        <div class="icon">${emptyIcon}</div>
+                        <p>${emptyText}</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            for (const order of orders) {
+                const isUrgent = order.elapsed_minutes >= 15;
+                const cardClass = isUrgent ? 'urgent' : status;
+                
+                html += `
+                    <div class="order-card ${cardClass}">
+                        <div class="order-header">
+                            <div class="order-number">#${order.id}</div>
+                            <div class="order-table">Стол ${order.table_number || '—'}</div>
+                            <div class="order-time ${isUrgent ? 'urgent' : ''}">
+                                ${order.created_at} • ${order.elapsed_minutes} мин
+                            </div>
+                        </div>
+                        
+                        <div class="order-items">
+                            ${order.items.map(i => `
+                                <div class="order-item">
+                                    <span><span class="qty">${i.quantity}×</span>${i.name}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        
+                        ${order.comment ? `<div class="order-comment">💬 ${order.comment}</div>` : ''}
+                        
+                        <div class="order-actions">
+                            ${status === 'new' ? `
+                                <button class="btn-action btn-cooking" onclick="changeStatus(${order.id}, 'cooking')">
+                                    🍳 Начать готовить
+                                </button>
+                            ` : `
+                                <button class="btn-action btn-ready" onclick="changeStatus(${order.id}, 'ready')">
+                                    ✅ Готово
+                                </button>
+                            `}
+                        </div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+        
+        function changeStatus(orderId, newStatus) {
+            fetch(`/kds/api/order/${orderId}/status/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': CSRF_TOKEN
+                },
+                body: JSON.stringify({status: newStatus})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    loadOrders();
+                } else {
+                    alert('Ошибка: ' + (data.error || 'Не удалось'));
+                }
+            });
+        }
+        
+        function showSoundIndicator() {
+            const indicator = document.getElementById('sound-indicator');
+            indicator.style.display = 'block';
+            setTimeout(() => {
+                indicator.style.display = 'none';
+            }, 3000);
+        }
+        
+        // Инициализация
+        loadOrders();
+        setInterval(loadOrders, 3000);  // Автообновление каждые 3 сек
+    </script>
+</body>
+</html>

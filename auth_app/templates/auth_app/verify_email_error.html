@@ -1,0 +1,12 @@
+{% extends 'auth_app/base.html' %}
+
+{% block title %}Ошибка{% endblock %}
+
+{% block content %}
+<div class="text-center">
+    <div style="font-size: 60px;">❌</div>
+    <h1>Ошибка</h1>
+    <p class="subtitle">{{ error }}</p>
+    <a href="/auth/signup/" class="btn btn-primary">Зарегистрироваться заново</a>
+</div>
+{% endblock %}

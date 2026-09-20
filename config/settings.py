@@ -19,7 +19,7 @@ ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 # --- Приложения ---
 INSTALLED_APPS = [
-    'daphne',  # ASGI-сервер для WebSocket (должен быть первым)
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -34,6 +34,11 @@ INSTALLED_APPS = [
     
     # Наши
     'apps',
+    'auth_app',  # ← добавили
+    'dashboard',  # ← добавили
+    'client',  # ← добавили
+    'cashier',  # ← добавили
+    'kds',  # ← добавили
 ]
 
 MIDDLEWARE = [
@@ -197,3 +202,20 @@ LOGGING = {
         'level': 'INFO',
     },
 }
+
+# --- Email ---
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@example.com')
+
+# --- URL сайта ---
+# URL сайта
+SITE_URL_LOCAL = os.getenv('SITE_URL_LOCAL', 'http://127.0.0.1:8000')
+SITE_URL_PROD = os.getenv('SITE_URL_PROD', 'https://your-domain.com')
+
+# Какой использовать по умолчанию
+SITE_URL = SITE_URL_LOCAL if DEBUG else SITE_URL_PROD

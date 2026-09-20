@@ -1,0 +1,109 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Обзор{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <h1>Обзор</h1>
+        <p class="text-muted mb-0">
+            Статус: 
+            <span class="status-badge 
+                {% if restaurant.status == 'trial' %}status-trial
+                {% elif restaurant.status == 'active' %}status-active
+                {% elif restaurant.status == 'pending_moderation' %}status-pending
+                {% else %}status-suspended{% endif %}">
+                {{ restaurant.get_status_display }}
+            </span>
+            {% if restaurant.status == 'trial' and days_left %}
+                <span class="text-muted">— осталось {{ days_left }} дн.</span>
+            {% endif %}
+        </p>
+    </div>
+</div>
+
+<!-- Статистика за сегодня -->
+<h5 class="text-muted mb-3">Сегодня</h5>
+<div class="row">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="value">{{ today_orders_count }}</div>
+            <div class="label">Заказов</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="value">{{ today_revenue }} <small>сом</small></div>
+            <div class="label">Выручка</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="value">{{ tables_count }}</div>
+            <div class="label">Столиков</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="value">{{ menu_items_count }}</div>
+            <div class="label">Блюд в меню</div>
+        </div>
+    </div>
+</div>
+
+<!-- Статистика за неделю -->
+<h5 class="text-muted mb-3 mt-4">За 7 дней</h5>
+<div class="row">
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="value">{{ week_orders_count }}</div>
+            <div class="label">Заказов</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="value">{{ week_revenue }} <small>сом</small></div>
+            <div class="label">Выручка</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="value">{{ printers_count }} / {{ agents_count }}</div>
+            <div class="label">Принтеров / Агентов</div>
+        </div>
+    </div>
+</div>
+
+<!-- Последние заказы -->
+<h5 class="text-muted mb-3 mt-4">Последние заказы</h5>
+<div class="stat-card">
+    {% if recent_orders %}
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Столик</th>
+                    <th>Сумма</th>
+                    <th>Статус</th>
+                    <th>Время</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in recent_orders %}
+                    <tr>
+                        <td><strong>#{{ order.id }}</strong></td>
+                        <td>{{ order.table.number|default:"—" }}</td>
+                        <td>{{ order.total_price }} сом</td>
+                        <td>{{ order.get_status_display }}</td>
+                        <td>{{ order.created_at|date:"H:i" }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p class="text-muted text-center mb-0 py-4">
+            Заказов пока нет
+        </p>
+    {% endif %}
+</div>
+{% endblock %}

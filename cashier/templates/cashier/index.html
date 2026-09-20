@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Касса — {{ restaurant.name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            background: #f0f2f5;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            overflow-x: hidden;
+        }
+        .topbar {
+            background: #1a1a2e;
+            color: white;
+            padding: 12px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .topbar .brand {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .topbar .info {
+            font-size: 13px;
+            opacity: 0.8;
+        }
+        .topbar .actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .btn-new-order {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .btn-new-order:hover {
+            background: #388E3C;
+        }
+        
+        .stats-bar {
+            display: flex;
+            gap: 15px;
+            padding: 15px 25px;
+            background: white;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .stat-mini {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+        .stat-mini .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        .stat-mini .dot.new { background: #dc3545; }
+        .stat-mini .dot.cooking { background: #ffc107; }
+        .stat-mini .dot.ready { background: #28a745; }
+        .stat-mini .dot.served { background: #17a2b8; }
+        .stat-mini .dot.free { background: #c8e6c9; border: 2px solid #4CAF50; }
+        
+        /* Схема зала */
+        .floor-plan-wrapper {
+            padding: 25px;
+            overflow: auto;
+            min-height: calc(100vh - 150px);
+        }
+        .floor-plan {
+            position: relative;
+            background: #fafafa;
+            background-image: 
+                linear-gradient(#e8e8e8 1px, transparent 1px),
+                linear-gradient(90deg, #e8e8e8 1px, transparent 1px);
+            background-size: 50px 50px;
+            min-height: 700px;
+            min-width: 1000px;
+            border: 2px dashed #ddd;
+            border-radius: 12px;
+            margin: 0 auto;
+        }
+        
+        .table-box {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-weight: bold;
+            color: #333;
+            transition: transform 0.15s, box-shadow 0.15s;
+            user-select: none;
+            padding: 5px;
+            text-align: center;
+        }
+        .table-box:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+            z-index: 10;
+        }
+        
+        /* Статусы столов */
+        .table-box.status-free {
+            background: #c8e6c9;
+            border: 3px solid #4CAF50;
+        }
+        .table-box.status-new {
+            background: #ffcdd2;
+            border: 3px solid #dc3545;
+            animation: pulse 2s infinite;
+        }
+        .table-box.status-cooking {
+            background: #ffe082;
+            border: 3px solid #ffc107;
+        }
+        .table-box.status-ready {
+            background: #a5d6a7;
+            border: 3px solid #28a745;
+        }
+        .table-box.status-served {
+            background: #b2ebf2;
+            border: 3px solid #17a2b8;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4); }
+            50% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+        }
+        
+        .table-box .number {
+            font-size: 20px;
+            line-height: 1.1;
+        }
+        .table-box .zone {
+            font-size: 10px;
+            color: #666;
+            margin-top: 2px;
+        }
+        .table-box .status {
+            font-size: 11px;
+            font-weight: bold;
+            margin-top: 3px;
+        }
+        .table-box .total {
+            font-size: 14px;
+            color: #1a1a2e;
+            margin-top: 3px;
+            font-weight: bold;
+        }
+        .table-box .time {
+            font-size: 10px;
+            color: #888;
+            margin-top: 2px;
+        }
+        
+        /* Модальные окна */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal.active {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            max-width: 700px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-header h2 {
+            margin: 0;
+            font-size: 22px;
+        }
+        .modal-body {
+            padding: 20px;
+        }
+        .modal-footer {
+            padding: 15px 20px;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 10px;
+        }
+        .btn-close-modal {
+            background: none;
+            border: none;
+            font-size: 30px;
+            cursor: pointer;
+            color: #999;
+        }
+        
+        .status-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+            width: 100%;
+        }
+        .status-btn {
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 15px;
+            cursor: pointer;
+        }
+        .btn-cooking { background: #ffc107; color: #333; }
+        .btn-ready { background: #28a745; color: white; }
+        .btn-served { background: #17a2b8; color: white; }
+        .btn-paid { background: #6c757d; color: white; }
+        .btn-cancel { background: #dc3545; color: white; }
+        .btn-create { background: #4CAF50; color: white; }
+        
+        .empty-plan {
+            text-align: center;
+            padding: 100px 20px;
+            color: #999;
+        }
+        .empty-plan .icon {
+            font-size: 80px;
+        }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <div>
+            <div class="brand">🍽 {{ restaurant.name }} — Касса</div>
+            <div class="info">Вы вошли как {{ request.user.username }}</div>
+        </div>
+        <div class="actions">
+            <button class="btn-new-order" onclick="openNewOrderModal()">+ Новый заказ</button>
+            <a href="{% url 'cashier:logout' %}" style="color: white; text-decoration: none;">Выйти</a>
+        </div>
+    </div>
+    
+    <div class="stats-bar">
+        <div class="stat-mini">
+            <div class="dot free"></div>
+            <span>Свободны: <strong id="count-free">0</strong></span>
+        </div>
+        <div class="stat-mini">
+            <div class="dot new"></div>
+            <span>Новые: <strong id="count-new">0</strong></span>
+        </div>
+        <div class="stat-mini">
+            <div class="dot cooking"></div>
+            <span>Готовится: <strong id="count-cooking">0</strong></span>
+        </div>
+        <div class="stat-mini">
+            <div class="dot ready"></div>
+            <span>Готовы: <strong id="count-ready">0</strong></span>
+        </div>
+        <div class="stat-mini">
+            <div class="dot served"></div>
+            <span>Поданы: <strong id="count-served">0</strong></span>
+        </div>
+    </div>
+    
+    <div class="floor-plan-wrapper">
+        <div class="floor-plan" id="floorPlan">
+            <div class="empty-plan">
+                <div class="icon">⏳</div>
+                <p>Загрузка схемы зала...</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Модальное окно заказа -->
+    <div class="modal" id="orderModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">Заказ</h2>
+                <button class="btn-close-modal" onclick="closeOrderModal()">×</button>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+            <div class="modal-footer" id="modal-footer"></div>
+        </div>
+    </div>
+    
+    <!-- Модальное окно нового заказа -->
+    <div class="modal" id="newOrderModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Новый заказ</h2>
+                <button class="btn-close-modal" onclick="closeNewOrderModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label"><strong>Столик</strong></label>
+                    <select id="new-order-table" class="form-select"></select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label"><strong>Блюда</strong></label>
+                    <div id="menu-list"></div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label"><strong>Комментарий</strong></label>
+                    <textarea id="new-order-comment" class="form-control" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeNewOrderModal()">Отмена</button>
+                <button class="btn btn-success" onclick="submitNewOrder()">Создать заказ</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const CSRF_TOKEN = '{{ csrf_token }}';
+        let currentTables = [];
+        let menuData = null;
+        let tablesData = null;
+        let newOrderCart = {};
+        
+        // Загрузка схемы зала
+        function loadFloorPlan() {
+            fetch('{% url "cashier:tables_with_status_api" %}')
+                .then(r => r.json())
+                .then(data => {
+                    currentTables = data.tables;
+                    renderFloorPlan(data.tables);
+                    updateCounts(data.tables);
+                })
+                .catch(err => console.error('Ошибка загрузки:', err));
+        }
+        
+        function renderFloorPlan(tables) {
+            const container = document.getElementById('floorPlan');
+            
+            if (tables.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-plan">
+                        <div class="icon">🪑</div>
+                        <h4>Столов пока нет</h4>
+                        <p>Добавьте столы в разделе «Столики»</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            for (const table of tables) {
+                const shape = table.shape === 'circle' ? '50%' : '12px';
+                
+                // Определяем статус
+                let statusClass = 'status-free';
+                let statusText = 'Свободен';
+                
+                if (table.has_order) {
+                    if (table.order_status === 'new') {
+                        statusClass = 'status-new';
+                        statusText = 'Новый';
+                    } else if (table.order_status === 'cooking') {
+                        statusClass = 'status-cooking';
+                        statusText = 'Готовится';
+                    } else if (table.order_status === 'ready') {
+                        statusClass = 'status-ready';
+                        statusText = 'Готов';
+                    } else if (table.order_status === 'served') {
+                        statusClass = 'status-served';
+                        statusText = 'Подан';
+                    }
+                }
+                
+                html += `
+                    <div class="table-box ${statusClass}"
+                         style="
+                            left: ${table.position_x}px;
+                            top: ${table.position_y}px;
+                            width: ${table.width}px;
+                            height: ${table.height}px;
+                            border-radius: ${shape};
+                         "
+                         onclick="openTable(${table.id})">
+                        <div class="number">№${table.number}</div>
+                        ${table.zone ? `<div class="zone">${table.zone}</div>` : ''}
+                        <div class="status">${statusText}</div>
+                        ${table.has_order ? `<div class="total">${table.order_total} сом</div>` : ''}
+                        ${table.has_order ? `<div class="time">${table.order_time}</div>` : ''}
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+        
+        function updateCounts(tables) {
+            let free = 0, newCnt = 0, cooking = 0, ready = 0, served = 0;
+            
+            for (const t of tables) {
+                if (!t.has_order) {
+                    free++;
+                } else {
+                    if (t.order_status === 'new') newCnt++;
+                    else if (t.order_status === 'cooking') cooking++;
+                    else if (t.order_status === 'ready') ready++;
+                    else if (t.order_status === 'served') served++;
+                }
+            }
+            
+            document.getElementById('count-free').textContent = free;
+            document.getElementById('count-new').textContent = newCnt;
+            document.getElementById('count-cooking').textContent = cooking;
+            document.getElementById('count-ready').textContent = ready;
+            document.getElementById('count-served').textContent = served;
+        }
+        
+        // Открытие стола
+        function openTable(tableId) {
+    // Всегда переходим на полноэкранное окно стола
+    window.location.href = `/cashier/table/${tableId}/`;
+}
+        
+        function openOrderModal(orderId) {
+            // Загружаем детали заказа
+            fetch(`/cashier/api/orders/`)
+                .then(r => r.json())
+                .then(data => {
+                    const order = data.orders.find(o => o.id === orderId);
+                    if (!order) {
+                        alert('Заказ не найден');
+                        return;
+                    }
+                    
+                    document.getElementById('modal-title').textContent = 
+                        `Заказ #${order.id} — Стол ${order.table_number || '—'}`;
+                    
+                    let body = `
+                        <div class="mb-3">
+                            <span class="badge" style="background: #4CAF50; font-size: 14px; padding: 8px 15px;">
+                                ${order.status_display}
+                            </span>
+                            <span style="margin-left: 15px; color: #888;">${order.created_at}</span>
+                        </div>
+                        <table class="table">
+                            <thead>
+                                <tr><th>Блюдо</th><th>Кол-во</th><th>Цена</th><th>Сумма</th></tr>
+                            </thead>
+                            <tbody>
+                                ${order.items.map(i => `
+                                    <tr>
+                                        <td>${i.name}</td>
+                                        <td>${i.quantity}</td>
+                                        <td>${i.price}</td>
+                                        <td><strong>${i.subtotal}</strong></td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                            <tfoot>
+                                <tr><th colspan="3" class="text-end">Итого:</th><th style="color: #4CAF50;">${order.total_price} сом</th></tr>
+                            </tfoot>
+                        </table>
+                        ${order.comment ? `<div class="alert alert-warning"><strong>Комментарий:</strong> ${order.comment}</div>` : ''}
+                    `;
+                    
+                    document.getElementById('modal-body').innerHTML = body;
+                    
+                    let footer = '<div class="status-buttons">';
+                    if (order.status === 'new') {
+                        footer += `<button class="status-btn btn-cooking" onclick="changeStatus(${order.id}, 'cooking')">🍳 Готовится</button>`;
+                    }
+                    if (order.status === 'cooking') {
+                        footer += `<button class="status-btn btn-ready" onclick="changeStatus(${order.id}, 'ready')">✅ Готов</button>`;
+                    }
+                    if (order.status === 'ready') {
+                        footer += `<button class="status-btn btn-served" onclick="changeStatus(${order.id}, 'served')">🍽 Подан</button>`;
+                    }
+                    if (order.status === 'served') {
+                        footer += `<button class="status-btn btn-paid" onclick="changeStatus(${order.id}, 'paid')">💰 Оплачен</button>`;
+                    }
+                    footer += `<button class="status-btn btn-cancel" onclick="changeStatus(${order.id}, 'cancelled')">❌ Отменить</button>`;
+                    footer += '</div>';
+                    
+                    document.getElementById('modal-footer').innerHTML = footer;
+                    document.getElementById('orderModal').classList.add('active');
+                });
+        }
+        
+        function closeOrderModal() {
+            document.getElementById('orderModal').classList.remove('active');
+        }
+        
+        function changeStatus(orderId, newStatus) {
+            if (!confirm('Изменить статус заказа?')) return;
+            
+            fetch(`/cashier/api/order/${orderId}/status/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': CSRF_TOKEN
+                },
+                body: JSON.stringify({status: newStatus})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    closeOrderModal();
+                    loadFloorPlan();
+                } else {
+                    alert('Ошибка: ' + (data.error || 'Не удалось'));
+                }
+            });
+        }
+        
+        // Новый заказ
+        function openNewOrderModal(preselectedTableId = null) {
+            if (!tablesData) {
+                fetch('{% url "cashier:tables_api" %}')
+                    .then(r => r.json())
+                    .then(data => {
+                        tablesData = data.tables;
+                        openNewOrderModal(preselectedTableId);
+                    });
+                return;
+            }
+            
+            if (!menuData) {
+                fetch('{% url "cashier:menu_api" %}')
+                    .then(r => r.json())
+                    .then(data => {
+                        menuData = data.categories;
+                        openNewOrderModal(preselectedTableId);
+                    });
+                return;
+            }
+            
+            const tableSelect = document.getElementById('new-order-table');
+            tableSelect.innerHTML = '<option value="">-- Выберите столик --</option>';
+            for (const t of tablesData) {
+                const busy = t.is_busy ? ' (занят)' : '';
+                const selected = (preselectedTableId && t.id === preselectedTableId) ? ' selected' : '';
+                tableSelect.innerHTML += `<option value="${t.id}"${selected}>Стол №${t.number}${busy}</option>`;
+            }
+            
+            const menuList = document.getElementById('menu-list');
+            let html = '';
+            for (const cat of menuData) {
+                html += `<div style="font-weight:bold; margin-top:10px;">${cat.name}</div>`;
+                for (const item of cat.items) {
+                    html += `
+                        <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                            <div>${item.name} — ${item.price} сом</div>
+                            <div>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="changeNewOrderQty(${item.id}, '${item.name}', ${item.price}, -1)">−</button>
+                                <span id="qty-${item.id}" style="display:inline-block; min-width:30px; text-align:center; font-weight:bold;">0</span>
+                                <button class="btn btn-sm btn-outline-success" onclick="changeNewOrderQty(${item.id}, '${item.name}', ${item.price}, 1)">+</button>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            menuList.innerHTML = html;
+            
+            newOrderCart = {};
+            document.getElementById('new-order-comment').value = '';
+            document.getElementById('newOrderModal').classList.add('active');
+        }
+        
+        function changeNewOrderQty(id, name, price, delta) {
+            if (!newOrderCart[id]) {
+                newOrderCart[id] = { id, name, price, quantity: 0 };
+            }
+            newOrderCart[id].quantity += delta;
+            if (newOrderCart[id].quantity <= 0) {
+                delete newOrderCart[id];
+                document.getElementById(`qty-${id}`).textContent = '0';
+            } else {
+                document.getElementById(`qty-${id}`).textContent = newOrderCart[id].quantity;
+            }
+        }
+        
+        function closeNewOrderModal() {
+            document.getElementById('newOrderModal').classList.remove('active');
+        }
+        
+        function submitNewOrder() {
+            const tableId = document.getElementById('new-order-table').value;
+            if (!tableId) {
+                alert('Выберите столик');
+                return;
+            }
+            
+            const items = Object.values(newOrderCart).map(i => ({
+                menu_item_id: i.id,
+                quantity: i.quantity
+            }));
+            
+            if (items.length === 0) {
+                alert('Выберите хотя бы одно блюдо');
+                return;
+            }
+            
+            fetch('{% url "cashier:create_order_manual" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': CSRF_TOKEN
+                },
+                body: JSON.stringify({
+                    table_id: parseInt(tableId),
+                    items: items,
+                    comment: document.getElementById('new-order-comment').value
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    closeNewOrderModal();
+                    loadFloorPlan();
+                } else {
+                    alert('Ошибка: ' + (data.error || 'Не удалось создать заказ'));
+                }
+            });
+        }
+        
+        // Инициализация
+        loadFloorPlan();
+        setInterval(loadFloorPlan, 5000);  // Автообновление каждые 5 сек
+        
+        // Закрытие модалок по клику на overlay
+        document.getElementById('orderModal').addEventListener('click', e => {
+            if (e.target.id === 'orderModal') closeOrderModal();
+        });
+        document.getElementById('newOrderModal').addEventListener('click', e => {
+            if (e.target.id === 'newOrderModal') closeNewOrderModal();
+        });
+    </script>
+</body>
+</html>

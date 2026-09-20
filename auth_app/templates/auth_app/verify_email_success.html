@@ -1,0 +1,29 @@
+{% extends 'auth_app/base.html' %}
+
+{% block title %}Email подтверждён{% endblock %}
+
+{% block content %}
+<div class="text-center">
+    <div style="font-size: 60px;">✅</div>
+    <h1>Email подтверждён!</h1>
+    
+    {% if already %}
+        <p class="subtitle">
+            Ваш email уже был подтверждён ранее.
+        </p>
+    {% else %}
+        <p class="subtitle">
+            Спасибо, {{ user.username }}! Ваш email подтверждён.
+        </p>
+    {% endif %}
+    
+    <div class="alert alert-info">
+        <strong>Ресторан:</strong> {{ restaurant.name }}<br>
+        <strong>Статус:</strong> {{ restaurant.get_status_display }}
+    </div>
+    
+    <p class="text-muted">
+        Ваша заявка отправлена на модерацию. Мы свяжемся с вами в ближайшее время.
+    </p>
+</div>
+{% endblock %}

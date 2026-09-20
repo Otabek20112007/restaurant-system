@@ -1,0 +1,228 @@
+{% extends 'client/base.html' %}
+
+{% block content %}
+    {% if categories or items_without_category %}
+        {% for category in categories %}
+            {% if category.items.all %}
+                <div class="category-title">{{ category.name }}</div>
+                {% for item in category.items.all %}
+                    {% if item.is_available %}
+                        <div class="menu-item">
+                            {% if item.image %}
+                                <img src="{{ item.image.url }}" alt="{{ item.name }}">
+                            {% else %}
+                                <div class="no-image">🍽</div>
+                            {% endif %}
+                            <div class="info">
+                                <div class="name">{{ item.name }}</div>
+                                {% if item.description %}
+                                    <div class="desc">{{ item.description }}</div>
+                                {% endif %}
+                                <div class="bottom">
+                                    <div>
+                                        <div class="price">{{ item.price }} {{ restaurant.currency }}</div>
+                                        {% if item.weight %}
+                                            <div class="weight">{{ item.weight }} г</div>
+                                        {% endif %}
+                                    </div>
+                                    <button class="btn-add" onclick="addToCart({{ item.id }}, '{{ item.name|escapejs }}', {{ item.price }})">+</button>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+        {% endfor %}
+    {% else %}
+        <div style="text-align: center; padding: 60px 20px; color: #999;">
+            <div style="font-size: 60px;">🍽</div>
+            <h3>Меню пока пустое</h3>
+            <p>Скоро появятся блюда</p>
+        </div>
+    {% endif %}
+    
+    <div class="modal-overlay" id="cartModal" onclick="closeCartOnOverlay(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2>Корзина</h2>
+                <button onclick="closeCart()">×</button>
+            </div>
+            
+            <div id="cartItems"></div>
+            
+            <textarea class="comment-input" id="orderComment" placeholder="Комментарий к заказу (необязательно)" rows="2"></textarea>
+            
+            <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; padding: 15px 0; border-top: 2px solid #eee;">
+                <span>Итого:</span>
+                <span><span id="modalTotal">0</span> {{ restaurant.currency }}</span>
+            </div>
+            
+            <button class="btn-submit" id="submitBtn" onclick="submitOrder()">
+                Заказать
+            </button>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const RESTAURANT_SLUG = '{{ restaurant.slug }}';
+    const TABLE_TOKEN = '{{ table.qr_token }}';
+    const CURRENCY = '{{ restaurant.currency }}';
+    const STORAGE_KEY = 'cart_' + RESTAURANT_SLUG + '_' + TABLE_TOKEN;
+    
+    let cart = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    
+    function saveCart() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(cart));
+    }
+    
+    function addToCart(id, name, price) {
+        if (!cart[id]) {
+            cart[id] = { id, name, price, quantity: 1 };
+        } else {
+            cart[id].quantity++;
+        }
+        saveCart();
+        updateCartBar();
+        showToast(name + ' добавлен');
+    }
+    
+    function changeQty(id, delta) {
+        if (!cart[id]) return;
+        cart[id].quantity += delta;
+        if (cart[id].quantity <= 0) {
+            delete cart[id];
+        }
+        saveCart();
+        updateCartBar();
+        renderCart();
+    }
+    
+    function updateCartBar() {
+        const items = Object.values(cart);
+        const count = items.reduce((sum, item) => sum + item.quantity, 0);
+        const total = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        
+        document.getElementById('cartCount').textContent = count;
+        document.getElementById('cartTotal').textContent = total.toFixed(2);
+        
+        const bar = document.getElementById('cartBar');
+        if (count > 0) {
+            bar.classList.add('active');
+        } else {
+            bar.classList.remove('active');
+        }
+    }
+    
+    function openCart() {
+        renderCart();
+        document.getElementById('cartModal').classList.add('active');
+    }
+    
+    function closeCart() {
+        document.getElementById('cartModal').classList.remove('active');
+    }
+    
+    function closeCartOnOverlay(e) {
+        if (e.target.id === 'cartModal') {
+            closeCart();
+        }
+    }
+    
+    function renderCart() {
+        const items = Object.values(cart);
+        const container = document.getElementById('cartItems');
+        
+        if (items.length === 0) {
+            container.innerHTML = '<p style="text-align:center;color:#999;padding:20px;">Корзина пуста</p>';
+            document.getElementById('modalTotal').textContent = '0';
+            document.getElementById('submitBtn').disabled = true;
+            return;
+        }
+        
+        document.getElementById('submitBtn').disabled = false;
+        
+        let html = '';
+        let total = 0;
+        for (const item of items) {
+            const subtotal = item.price * item.quantity;
+            total += subtotal;
+            html += `
+                <div class="cart-item">
+                    <div>
+                        <div style="font-weight:bold;">${item.name}</div>
+                        <div style="color:#888;font-size:13px;">${item.price} × ${item.quantity} = ${subtotal.toFixed(2)} ${CURRENCY}</div>
+                    </div>
+                    <div class="qty-controls">
+                        <button class="qty-btn" onclick="changeQty(${item.id}, -1)">−</button>
+                        <span style="font-weight:bold;">${item.quantity}</span>
+                        <button class="qty-btn primary" onclick="changeQty(${item.id}, 1)">+</button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        container.innerHTML = html;
+        document.getElementById('modalTotal').textContent = total.toFixed(2);
+    }
+    
+    function submitOrder() {
+        const items = Object.values(cart);
+        if (items.length === 0) return;
+        
+        const btn = document.getElementById('submitBtn');
+        btn.disabled = true;
+        btn.textContent = 'Отправка...';
+        
+        const payload = {
+            items: items.map(item => ({
+                menu_item_id: item.id,
+                quantity: item.quantity
+            })),
+            comment: document.getElementById('orderComment').value
+        };
+        
+        fetch(`/r/${RESTAURANT_SLUG}/t/${TABLE_TOKEN}/order/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'ok') {
+                localStorage.removeItem(STORAGE_KEY);
+                cart = {};
+                window.location.href = `/r/${RESTAURANT_SLUG}/order/${data.order_id}/`;
+            } else {
+                alert('Ошибка: ' + (data.error || 'Не удалось создать заказ'));
+                btn.disabled = false;
+                btn.textContent = 'Заказать';
+            }
+        })
+        .catch(error => {
+            alert('Ошибка сети: ' + error);
+            btn.disabled = false;
+            btn.textContent = 'Заказать';
+        });
+    }
+    
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+    
+    function showToast(message) {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 1500);
+    }
+    
+    updateCartBar();
+</script>
+{% endblock %}
